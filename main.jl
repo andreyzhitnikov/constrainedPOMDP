@@ -89,7 +89,7 @@ function main()
 
         # create particle filter
         model = ParticleFilterModel{Vector{Float64}}((x...)-> dynamics(pomdp, x[1], x[2], x[3]), (x...)-> pdfObservationModel(pomdp, x[1], x[2], x[3], x[4]))
-        N = parsed_args["num_particles"] # number of particles
+        N = parsed_args["num-particles"] # number of particles
         pf = BootstrapFilter(model, N, rng)
         
         # init trajectory (τ)
@@ -106,12 +106,12 @@ function main()
 
         if parsed_args["sol"] == "PCSS"
             solver = PCSS(;mᵈ=parsed_args["obs"], Dmax = pomdp.Dmax,PF = pf, 
-                                   δ=parsed_args["delta"], ϵ=parsed_args["epsilon"], ϕ=parsed_args["constr_op"])
+                                   δ=parsed_args["delta"], ϵ=parsed_args["epsilon"], ϕ=parsed_args["constr-op"])
             planner = PCSSPlanner(solver, pomdp)    
             obstacles_title = "obstacles" 
         elseif parsed_args["sol"] == "CCSS"
             solver = CCSS(;mᵈ =parsed_args["obs"], Dmax = pomdp.Dmax,PF = pf, 
-                                        δ=parsed_args["delta"], ϕ=parsed_args["constr_op"])
+                                        δ=parsed_args["delta"], ϕ=parsed_args["constr-op"])
             planner = CCSSPlanner(solver, pomdp, Future.randjump(deepcopy(pomdp.rng), big(10)^20))    
             obstacles_title = "obstacles"     
         end   
@@ -123,7 +123,7 @@ function main()
         try
             #tick()    
             for i in 1:parsed_args["simulations"]-1
-                if parsed_args["constr_op"] == "CVaR"
+                if parsed_args["constr-op"] == "CVaR"
                     status = _cvar_collision(planner, b_PF_τ[end])
                     println(status)
                 end  

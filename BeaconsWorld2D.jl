@@ -51,7 +51,7 @@ function BeaconsWorld2D(horizon::Int64, rng::MersenneTwister)
     return pomdp
 end
 
-function update_observation_cov(pomdp::POMDPscenario, x::Array{Float64, 1})
+function update_observation_cov!(pomdp::POMDPscenario, x::Array{Float64, 1})
     mindist = Inf
     for i in 1:length(pomdp.beacons[:,1])
         distance = norm(x - pomdp.beacons[i,:])
@@ -74,7 +74,7 @@ end
 
 function pdfObservationModel(pomdp::POMDPscenario, x_prev::Vector{Float64}, a::Vector{Float64}, x::Array{Float64, 1}, obs::Array{Float64, 1})
     #global pomdp::POMDPscenario
-    (pomdp::POMDPscenario).Σv = update_observation_cov((pomdp::POMDPscenario), x)
+    (pomdp::POMDPscenario).Σv = update_observation_cov!((pomdp::POMDPscenario), x)
     Nv = MvNormal([0, 0], (pomdp::POMDPscenario).Σv)
     noise = obs - x
     return pdf(Nv, noise)
@@ -138,7 +138,7 @@ function GenerateObservationFromBeacons(pomdp::POMDPscenario, x::Array{Float64, 
         distances[index] = norm(x - pomdp.beacons[index, :]) # calculate distances from x to all beacons
     end
     index = argmin(distances) # get observation only from nearest beacon
-    pomdp.Σv = update_observation_cov(pomdp, x)
+    pomdp.Σv = update_observation_cov!(pomdp, x)
     Nv = MvNormal([0, 0], pomdp.Σv)
     v = rand(rng, Nv)
     dX = x - pomdp.beacons[index, :]
@@ -174,14 +174,16 @@ function oneStepSim(p::Planner, b::FullNormal, x_prev::Array{Float64, 1}, a::Arr
     x = SampleMotionModel(p.pomdp, a, x_prev, p.pomdp.rng)
     o_rel = GenerateObservationFromBeacons(p.pomdp, x, false, p.pomdp.rng)
     if o_rel === nothing
+        o = nothing
         b_post = b_prop
     else
         o = o_rel[1] + p.pomdp.beacons[o_rel[2], :]
         # update Cov. according to distance from beacon
-        update_observation_cov(p.pomdp, x)
+        update_observation_cov!(p.pomdp, x)
         b_post = PropagateUpdateBelief(b_prop, p.pomdp, a, o)
-        r = _mean_distance_to_goal(p, b_post)#reward(p, b_post, x)
+        
     end
+    r = _mean_distance_to_goal(p, b_post)#reward(p, b_post, x)
     # check for collision 
     coll_status = false
     for i in 1:p.pomdp.obstacles_length
